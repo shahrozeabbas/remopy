@@ -1,6 +1,6 @@
 # remopy
 
-Python data package for REMO v1 regulatory element modules (GRCh38).
+Python implementation of [REMO.v1.GRCh38](https://github.com/stuart-lab/REMO.v1.GRCh38), the R data package from the [Stuart Lab](https://github.com/stuart-lab).
 
 REMO (Regulatory Element MOdules) provides pre-defined, cell-type annotated regulatory element groupings for single-cell chromatin accessibility analysis.
 
