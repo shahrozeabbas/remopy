@@ -1,0 +1,56 @@
+[project]
+name = 'remopy'
+version = '1.0.0'
+description = 'REMO v1 regulatory element modules for GRCh38'
+readme = 'README.md'
+requires-python = '>=3.10'
+license = {file = 'LICENSE'}
+authors = [
+    {name = 'Tim Stuart', email = 'stuartt@a-star.edu.sg'},
+    {name = 'Chrysania Lim', email = 'Chrysania_Lim@a-star.edu.sg'},
+]
+keywords = ['genomics', 'scATAC', 'single-cell', 'regulatory-elements', 'chromatin']
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: Artistic License',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Topic :: Scientific/Engineering :: Bio-Informatics',
+]
+
+dependencies = [
+    'polars>=1.0',
+]
+
+[project.optional-dependencies]
+quantify = [
+    'polars-bio>=0.2',
+    'anndata>=0.10',
+    'scipy>=1.10',
+    'numpy>=1.24',
+]
+all = [
+    'polars-bio>=0.2',
+    'anndata>=0.10',
+    'scipy>=1.10',
+    'numpy>=1.24',
+]
+
+[project.urls]
+Homepage = 'https://github.com/stuart-lab/remopy'
+Repository = 'https://github.com/stuart-lab/remopy'
+
+[build-system]
+requires = ['hatchling']
+build-backend = 'hatchling.build'
+
+[tool.hatch.build.targets.sdist]
+include = [
+    '/src',
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ['src/remopy']
