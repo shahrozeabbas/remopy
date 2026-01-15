@@ -79,6 +79,8 @@ sc.tl.leiden(adata)
 
 Stuart T, Lim C, et al. Regulatory element modules as universal features for single-cell chromatin analysis. (2025)
 
+[Preprint on bioRxiv](https://www.biorxiv.org/content/10.64898/2025.12.10.692786v1)
+
 ## License
 
 Artistic License 2.0
