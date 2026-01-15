@@ -40,8 +40,8 @@ all = [
 ]
 
 [project.urls]
-Homepage = 'https://github.com/stuart-lab/remopy'
-Repository = 'https://github.com/stuart-lab/remopy'
+Homepage = 'https://github.com/shahrozeabbas/remopy'
+Repository = 'https://github.com/shahrozeabbas/remopy'
 
 [build-system]
 requires = ['hatchling']
