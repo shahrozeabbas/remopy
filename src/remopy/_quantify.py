@@ -1,6 +1,7 @@
 '''Fragment quantification into REMO modules.'''
 
 import numpy as np
+import pandas as pd
 import polars as pl
 from scipy import sparse
 from anndata import AnnData
@@ -62,40 +63,33 @@ def quantify(
     
     # Filter cells by total fragment count
     cell_counts = frags.group_by('barcode').len()
-    keep = cell_counts.filter(pl.col('len') >= min_fragments)['barcode']
-    frags = frags.filter(pl.col('barcode').is_in(keep))
-    
+    keep = cell_counts.filter(pl.col('len') >= min_fragments).select('barcode')
     n_cells_before = cell_counts.height
-    n_cells_after = keep.len()
+    n_cells_after = keep.height
+    frags = frags.join(keep, on='barcode')
     print(f'Filtered to {n_cells_after}/{n_cells_before} cells with >= {min_fragments} fragments')
     
     # Find overlaps between fragments and modules
     print('Finding overlaps...')
     overlaps = pb.overlap(frags, mods, how='inner', suffix='_mod')
+    del frags
     
     # Count fragments per cell per module
     print('Counting fragments per module...')
-    counts = (
-        overlaps
-        .group_by(['barcode', 'REMO'])
-        .len()
-        .rename({'len': 'n'})
-    )
+    counts = overlaps.group_by(['barcode', 'REMO']).len().rename({'len': 'n'})
+    del overlaps
     
     # Build sparse matrix
     print('Building count matrix...')
-    barcodes = sorted(counts['barcode'].unique().to_list())
-    remo_ids = sorted(mods['REMO'].unique().to_list())
+    barcodes = counts['barcode'].unique().sort().to_list()
+    remo_ids = mods['REMO'].unique().sort().to_list()
     
-    bc_idx = {b: i for i, b in enumerate(barcodes)}
-    mod_idx = {m: i for i, m in enumerate(remo_ids)}
-    
-    rows = [bc_idx[b] for b in counts['barcode'].to_list()]
-    cols = [mod_idx[m] for m in counts['REMO'].to_list()]
-    data = counts['n'].to_list()
+    bc_map = pl.DataFrame({'barcode': barcodes, 'row': range(len(barcodes))})
+    mod_map = pl.DataFrame({'REMO': remo_ids, 'col': range(len(remo_ids))})
+    counts = counts.join(bc_map, on='barcode').join(mod_map, on='REMO')
     
     X = sparse.csr_matrix(
-        (data, (rows, cols)),
+        (counts['n'].to_numpy(), (counts['row'].to_numpy(), counts['col'].to_numpy())),
         shape=(len(barcodes), len(remo_ids)),
         dtype=np.int32
     )
@@ -105,7 +99,7 @@ def quantify(
     var = meta.reindex(remo_ids)
     
     # Build obs
-    obs = pl.DataFrame({'barcode': barcodes}).to_pandas().set_index('barcode')
+    obs = pd.DataFrame(index=pd.Index(barcodes, name='barcode'))
     
     print(f'Created AnnData: {len(barcodes)} cells × {len(remo_ids)} modules')
     
