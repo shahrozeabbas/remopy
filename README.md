@@ -40,7 +40,7 @@ brain_cell_types = tissues.get('Brain', [])
 
 ### Fragment Quantification (scATAC-seq)
 
-Skip peak calling entirely — quantify fragments directly into REMO modules:
+Skip peak calling entirely — quantify fragments into REMO:
 
 ```python
 import remopy as remo
