@@ -33,10 +33,7 @@ quantify = [
     'numpy>=1.24',
 ]
 all = [
-    'polars-bio>=0.2',
-    'anndata>=0.10',
-    'scipy>=1.10',
-    'numpy>=1.24',
+    'remopy[quantify]',
 ]
 
 [project.urls]
