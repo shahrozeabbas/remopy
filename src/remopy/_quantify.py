@@ -1,17 +1,20 @@
 '''Fragment quantification into REMO.'''
 
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 import polars as pl
 from scipy import sparse
 from anndata import AnnData
 
-from remopy._data import modules, metadata
+from remopy._data import modules as load_modules, metadata
 
 
 def quantify(
     fragments: str,
     min_fragments: int = 1000,
+    modules: Optional[pl.DataFrame] = None,
 ) -> AnnData:
     '''
     Quantify fragments into modules.
@@ -26,6 +29,10 @@ def quantify(
         Can be gzipped.
     min_fragments
         Minimum total fragments per cell to include in output.
+    modules
+        Optional filtered modules DataFrame. If provided, only these modules
+        will be used for quantification. Must have columns: chrom, start, end, REMO.
+        If None, all modules are used.
         
     Returns
     -------
@@ -40,6 +47,11 @@ def quantify(
     >>> adata = remo.quantify('fragments.tsv.gz')
     >>> adata
     AnnData object with n_obs × n_vars = 5000 × 340069
+    
+    >>> # Quantify only T cell modules
+    >>> t_cell_ids = remo.terms().get('T cell', [])
+    >>> t_cell_mods = remo.modules().filter(pl.col('REMO').is_in(t_cell_ids))
+    >>> adata = remo.quantify('fragments.tsv.gz', modules=t_cell_mods)
     '''
     try:
         import polars_bio as pb
@@ -50,7 +62,7 @@ def quantify(
         )
     
     # Load REMO modules
-    mods = modules()
+    mods = modules if modules is not None else load_modules()
     
     # Load fragments (only first 4 columns needed)
     frags = pl.read_csv(
