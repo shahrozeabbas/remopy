@@ -43,8 +43,8 @@ brain_cell_types = tissues.get('Brain', [])
 Skip peak calling entirely — quantify fragments into REMO:
 
 ```python
-import remopy as remo
 import scanpy as sc
+import remopy as remo
 
 # Quantify fragments into modules (requires polars-bio)
 adata = remo.quantify('fragments.tsv.gz', min_fragments=1000)
@@ -62,7 +62,7 @@ sc.tl.leiden(adata)
 
 | Data | Description |
 |------|-------------|
-| `modules()` | 1,507,327 CRE intervals grouped into 340,069 REMO modules |
+| `modules()` | 1,507,327 CRE intervals grouped into 340,069 modules |
 | `metadata()` | Module-level stats: CRE count, bases, GC content, cell ontology |
 | `terms()` | Cell type name → module ID mappings (144 cell types) |
 | `cl_ids()` | Cell Ontology ID → module ID mappings |

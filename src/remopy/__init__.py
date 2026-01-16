@@ -1,7 +1,7 @@
 '''
 REMO v1 regulatory element modules for GRCh38.
 
-A data package providing REMO module coordinates, metadata,
+A data package providing module coordinates, metadata,
 and cell ontology annotations for the human GRCh38 genome.
 '''
 

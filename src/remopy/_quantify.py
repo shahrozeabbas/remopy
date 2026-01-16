@@ -1,4 +1,4 @@
-'''Fragment quantification into REMO modules.'''
+'''Fragment quantification into REMO.'''
 
 import numpy as np
 import pandas as pd
@@ -14,9 +14,9 @@ def quantify(
     min_fragments: int = 1000,
 ) -> AnnData:
     '''
-    Quantify fragments into REMO modules.
+    Quantify fragments into modules.
     
-    Counts the number of fragments overlapping each REMO module per cell.
+    Counts the number of fragments overlapping each module per cell.
     Each fragment is counted once (the read support column is ignored).
     
     Parameters
@@ -30,7 +30,7 @@ def quantify(
     Returns
     -------
     AnnData
-        AnnData object with cells as obs and REMO modules as var.
+        AnnData object with cells as obs and modules as var.
         X contains fragment counts (sparse integer matrix).
         var contains module metadata (CREs, Bases, GC_mean, CL, etc.).
         
