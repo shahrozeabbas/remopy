@@ -65,7 +65,7 @@ sc.tl.leiden(adata)
 | `modules()` | 1,507,327 CRE intervals grouped into 340,069 modules |
 | `metadata()` | Module-level stats: CRE count, bases, GC content, cell ontology |
 | `terms()` | Cell type name → module ID mappings (144 cell types) |
-| `cl_ids()` | Cell Ontology ID → module ID mappings |
+| `ontology()` | Cell Ontology ID → module ID mappings |
 | `tissues()` | Tissue → cell type mappings (25 tissues) |
 
 ## Why REMO?

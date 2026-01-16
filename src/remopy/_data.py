@@ -58,7 +58,7 @@ def terms() -> dict[str, list[str]]:
 
 
 @cache
-def cl_ids() -> dict[str, list[str]]:
+def ontology() -> dict[str, list[str]]:
     '''
     Load Cell Ontology ID to REMO module mappings.
     

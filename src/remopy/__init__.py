@@ -7,14 +7,14 @@ and cell ontology annotations for the human GRCh38 genome.
 
 from typing import TYPE_CHECKING, Optional
 
-from remopy._data import modules, metadata, terms, cl_ids, tissues
+from remopy._data import modules, metadata, terms, ontology, tissues
 
 if TYPE_CHECKING:
     from anndata import AnnData
     import polars as pl
 
 __version__ = '1.0.0'
-__all__ = ['modules', 'metadata', 'terms', 'cl_ids', 'tissues', 'quantify']
+__all__ = ['modules', 'metadata', 'terms', 'ontology', 'tissues', 'quantify']
 
 
 def quantify(
