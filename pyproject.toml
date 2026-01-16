@@ -6,8 +6,7 @@ readme = 'README.md'
 requires-python = '>=3.10'
 license = {file = 'LICENSE'}
 authors = [
-    {name = 'Tim Stuart', email = 'stuartt@a-star.edu.sg'},
-    {name = 'Chrysania Lim', email = 'Chrysania_Lim@a-star.edu.sg'},
+    {name = 'Shahroze Abbas'},
 ]
 keywords = ['genomics', 'scATAC', 'single-cell', 'regulatory-elements', 'chromatin']
 classifiers = [
