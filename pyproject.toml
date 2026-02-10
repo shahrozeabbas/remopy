@@ -1,6 +1,6 @@
 [project]
 name = 'remopy'
-version = '1.0.1'
+version = '1.0.2'
 description = 'REMO v1 regulatory element modules for GRCh38'
 readme = 'README.md'
 requires-python = '>=3.10'
@@ -28,6 +28,7 @@ dependencies = [
 quantify = [
     'polars-bio>=0.2',
     'anndata>=0.10',
+    'pandas>=1.5',
     'scipy>=1.10',
     'numpy>=1.24',
 ]
