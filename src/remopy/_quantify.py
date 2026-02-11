@@ -139,7 +139,7 @@ def quantify(
     del frags
 
     logger.info('Counting fragments per module...')
-    counts = overlaps.group_by(['barcode', 'REMO']).len().rename({'len': 'n'}).collect()
+    counts = overlaps.group_by(['barcode', 'REMO_mod']).len().rename({'len': 'n', 'REMO_mod': 'REMO'}).collect()
     del overlaps
 
     logger.info('Building count matrix...')
