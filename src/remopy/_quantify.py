@@ -1,6 +1,7 @@
 '''Fragment quantification into REMO.'''
 
-from typing import Optional
+import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,11 +11,14 @@ from anndata import AnnData
 
 from remopy._data import modules as load_modules, metadata
 
+logger = logging.getLogger(__name__)
+
 
 def quantify(
-    fragments: str,
+    fragments: str | Path,
     min_fragments: int = 1000,
-    modules: Optional[pl.DataFrame] = None,
+    modules: pl.DataFrame | None = None,
+    verbose: bool = True,
 ) -> AnnData:
     '''
     Quantify fragments into modules.
@@ -33,7 +37,9 @@ def quantify(
         Optional filtered modules DataFrame. If provided, only these modules
         will be used for quantification. Must have columns: chrom, start, end, REMO.
         If None, all modules are used.
-        
+    verbose
+        If True, log progress messages. If False, suppress output.
+
     Returns
     -------
     AnnData
@@ -60,7 +66,22 @@ def quantify(
             'polars-bio is required for quantification. '
             'Install with: pip install polars-bio'
         )
-    
+
+    if not Path(fragments).exists():
+        raise FileNotFoundError(f'Fragments file not found: {fragments}')
+    if min_fragments < 1:
+        raise ValueError(f'min_fragments must be >= 1, got {min_fragments}')
+
+    if verbose:
+        logger.setLevel(logging.INFO)
+        if not logger.handlers:
+            logger.addHandler(logging.StreamHandler())
+    else:
+        logger.setLevel(logging.CRITICAL)
+
+    pb.set_option('datafusion.bio.coordinate_system_check', False)
+    pb.set_option('datafusion.bio.coordinate_system_zero_based', True)
+
     # Load REMO modules
     mods = modules if modules is not None else load_modules()
     
@@ -79,20 +100,20 @@ def quantify(
     n_cells_before = cell_counts.height
     n_cells_after = keep.height
     frags = frags.join(keep, on='barcode')
-    print(f'Filtered to {n_cells_after}/{n_cells_before} cells with >= {min_fragments} fragments')
+    logger.info(f'Filtered to {n_cells_after}/{n_cells_before} cells with >= {min_fragments} fragments')
     
     # Find overlaps between fragments and modules
-    print('Finding overlaps...')
-    overlaps = pb.overlap(frags, mods, how='inner', suffix='_mod')
+    logger.info('Finding overlaps...')
+    overlaps = pb.overlap(frags, mods, suffixes=('', '_mod'), output_type='polars.DataFrame')
     del frags
     
     # Count fragments per cell per module
-    print('Counting fragments per module...')
+    logger.info('Counting fragments per module...')
     counts = overlaps.group_by(['barcode', 'REMO']).len().rename({'len': 'n'})
     del overlaps
     
     # Build sparse matrix
-    print('Building count matrix...')
+    logger.info('Building count matrix...')
     barcodes = counts['barcode'].unique().sort().to_list()
     remo_ids = mods['REMO'].unique().sort().to_list()
     
@@ -113,6 +134,6 @@ def quantify(
     # Build obs
     obs = pd.DataFrame(index=pd.Index(barcodes, name='barcode'))
     
-    print(f'Created AnnData: {len(barcodes)} cells × {len(remo_ids)} modules')
+    logger.info(f'Created AnnData: {len(barcodes)} cells × {len(remo_ids)} modules')
     
     return AnnData(X=X, obs=obs, var=var)
