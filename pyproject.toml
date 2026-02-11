@@ -1,6 +1,6 @@
 [project]
 name = 'remopy'
-version = '1.0.2'
+version = '1.1.0'
 description = 'REMO v1 regulatory element modules for GRCh38'
 readme = 'README.md'
 requires-python = '>=3.10'
