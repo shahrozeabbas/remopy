@@ -1,6 +1,7 @@
 '''Fragment quantification into REMO.'''
 
 import logging
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -12,6 +13,49 @@ from anndata import AnnData
 from remopy._data import modules as load_modules, metadata
 
 logger = logging.getLogger(__name__)
+logger.propagate = False
+
+
+def _load_fragments(path: str) -> pl.LazyFrame:
+    '''Load fragments as a LazyFrame, streaming decompression for gzip.'''
+    return pl.scan_csv(
+        path,
+        separator='\t',
+        has_header=False,
+        new_columns=['chrom', 'start', 'end', 'barcode'],
+    ).select(pl.col('chrom'), pl.col('start'), pl.col('end'), pl.col('barcode'))
+
+
+def _filter_cells(
+    frags: pl.LazyFrame, min_fragments: int,
+) -> tuple[pl.LazyFrame, int, int]:
+    '''Filter to cells meeting the minimum fragment threshold.'''
+    counts = frags.group_by('barcode').len().collect()
+    keep = counts.filter(pl.col('len') >= min_fragments).select('barcode')
+    return frags.join(keep.lazy(), on='barcode'), counts.height, keep.height
+
+
+def _build_anndata(
+    counts: pl.DataFrame, remo_ids: list[str],
+) -> AnnData:
+    '''Build AnnData from cell-module count table.'''
+    barcodes = counts['barcode'].unique().sort().to_list()
+
+    bc_map = pl.DataFrame({'barcode': barcodes, 'row': range(len(barcodes))})
+    mod_map = pl.DataFrame({'REMO': remo_ids, 'col': range(len(remo_ids))})
+    counts = counts.join(bc_map, on='barcode').join(mod_map, on='REMO')
+
+    X = sparse.csr_matrix(
+        (counts['n'].to_numpy(), (counts['row'].to_numpy(), counts['col'].to_numpy())),
+        shape=(len(barcodes), len(remo_ids)),
+        dtype=np.int32,
+    )
+
+    meta = metadata().to_pandas().set_index('REMO')
+    var = meta.reindex(remo_ids)
+    obs = pd.DataFrame(index=pd.Index(barcodes, name='barcode'))
+
+    return AnnData(X=X, obs=obs, var=var)
 
 
 def quantify(
@@ -22,10 +66,10 @@ def quantify(
 ) -> AnnData:
     '''
     Quantify fragments into modules.
-    
+
     Counts the number of fragments overlapping each module per cell.
     Each fragment is counted once (the read support column is ignored).
-    
+
     Parameters
     ----------
     fragments
@@ -46,14 +90,14 @@ def quantify(
         AnnData object with cells as obs and modules as var.
         X contains fragment counts (sparse integer matrix).
         var contains module metadata (CREs, Bases, GC_mean, CL, etc.).
-        
+
     Examples
     --------
     >>> import remopy as remo
     >>> adata = remo.quantify('fragments.tsv.gz')
     >>> adata
     AnnData object with n_obs × n_vars = 5000 × 340069
-    
+
     >>> # Quantify only T cell modules
     >>> t_cell_ids = remo.terms().get('T cell', [])
     >>> t_cell_mods = remo.modules().filter(pl.col('REMO').is_in(t_cell_ids))
@@ -79,61 +123,28 @@ def quantify(
     else:
         logger.setLevel(logging.CRITICAL)
 
-    pb.set_option('datafusion.bio.coordinate_system_check', False)
-    pb.set_option('datafusion.bio.coordinate_system_zero_based', True)
+    pb.set_option(pb.POLARS_BIO_COORDINATE_SYSTEM_CHECK, 'false')
+    pb.set_option(pb.POLARS_BIO_COORDINATE_SYSTEM_ZERO_BASED, 'true')
 
-    # Load REMO modules
     mods = modules if modules is not None else load_modules()
-    
-    # Load fragments (only first 4 columns needed)
-    frags = pl.read_csv(
-        fragments,
-        separator='\t',
-        has_header=False,
-        columns=[0, 1, 2, 3],
-        new_columns=['chrom', 'start', 'end', 'barcode']
-    )
-    
-    # Filter cells by total fragment count
-    cell_counts = frags.group_by('barcode').len()
-    keep = cell_counts.filter(pl.col('len') >= min_fragments).select('barcode')
-    n_cells_before = cell_counts.height
-    n_cells_after = keep.height
-    frags = frags.join(keep, on='barcode')
-    logger.info(f'Filtered to {n_cells_after}/{n_cells_before} cells with >= {min_fragments} fragments')
-    
-    # Find overlaps between fragments and modules
+
+    frags = _load_fragments(str(fragments))
+    frags, n_before, n_after = _filter_cells(frags, min_fragments)
+    logger.info(f'Filtered to {n_after}/{n_before} cells with >= {min_fragments} fragments')
+
     logger.info('Finding overlaps...')
-    overlaps = pb.overlap(frags, mods, suffixes=('', '_mod'), output_type='polars.DataFrame')
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', message='Coordinate system metadata is missing')
+        overlaps = pb.overlap(frags, mods, suffixes=('', '_mod'))
     del frags
-    
-    # Count fragments per cell per module
+
     logger.info('Counting fragments per module...')
-    counts = overlaps.group_by(['barcode', 'REMO']).len().rename({'len': 'n'})
+    counts = overlaps.group_by(['barcode', 'REMO']).len().rename({'len': 'n'}).collect()
     del overlaps
-    
-    # Build sparse matrix
+
     logger.info('Building count matrix...')
-    barcodes = counts['barcode'].unique().sort().to_list()
     remo_ids = mods['REMO'].unique().sort().to_list()
-    
-    bc_map = pl.DataFrame({'barcode': barcodes, 'row': range(len(barcodes))})
-    mod_map = pl.DataFrame({'REMO': remo_ids, 'col': range(len(remo_ids))})
-    counts = counts.join(bc_map, on='barcode').join(mod_map, on='REMO')
-    
-    X = sparse.csr_matrix(
-        (counts['n'].to_numpy(), (counts['row'].to_numpy(), counts['col'].to_numpy())),
-        shape=(len(barcodes), len(remo_ids)),
-        dtype=np.int32
-    )
-    
-    # Build var from metadata
-    meta = metadata().to_pandas().set_index('REMO')
-    var = meta.reindex(remo_ids)
-    
-    # Build obs
-    obs = pd.DataFrame(index=pd.Index(barcodes, name='barcode'))
-    
-    logger.info(f'Created AnnData: {len(barcodes)} cells × {len(remo_ids)} modules')
-    
-    return AnnData(X=X, obs=obs, var=var)
+    adata = _build_anndata(counts, remo_ids)
+
+    logger.info(f'Created AnnData: {adata.n_obs} cells × {adata.n_vars} modules')
+    return adata
